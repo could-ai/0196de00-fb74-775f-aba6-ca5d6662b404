@@ -1,0 +1,48 @@
+# Disable Fastlane's usage data collection
+opt_out_usage
+
+default_platform(:android)
+
+platform :android do
+  desc "Deploy to Google Play"
+  lane :publish_to_play_store do
+    puts "Using package name: app.couldai.ppp"
+    
+    begin
+      # 尝试使用completed状态发布应用
+      upload_to_play_store(
+        package_name: 'app.couldai.ppp',
+        track: 'internal',
+        aab: '../build/app/outputs/bundle/release/app-release.aab',
+        json_key_data: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"],
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_screenshots: true,
+        release_status: 'completed'
+      )
+    rescue => e
+      # 捕获错误信息
+      puts "First upload attempt failed: #{e}"
+      
+      # 检查是否包含特定错误信息
+      if e.to_s.include?("Only releases with status draft may be created on draft app")
+        puts "Detected draft app, retrying with draft release status..."
+        
+        # 再次尝试，使用draft状态
+        upload_to_play_store(
+          package_name: 'app.couldai.ppp',
+          track: 'internal',
+          aab: '../build/app/outputs/bundle/release/app-release.aab',
+          json_key_data: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"],
+          skip_upload_metadata: true,
+          skip_upload_images: true,
+          skip_upload_screenshots: true,
+          release_status: 'draft'
+        )
+      else
+        # 如果是其他错误，抛出原始错误
+        raise e
+      end
+    end
+  end
+end
